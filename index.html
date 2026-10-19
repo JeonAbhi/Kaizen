@@ -260,11 +260,26 @@
     return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
   }
 
+  // Uses Claude's storage when available, otherwise the browser's localStorage
+  const store = {
+    async get(){
+      if(window.storage){
+        try{ const r = await window.storage.get(STORAGE_KEY, false); return r && r.value; }
+        catch(e){ return null; }
+      }
+      return localStorage.getItem(STORAGE_KEY);
+    },
+    async set(v){
+      if(window.storage){ await window.storage.set(STORAGE_KEY, v, false); }
+      else { localStorage.setItem(STORAGE_KEY, v); }
+    }
+  };
+
   async function loadData(){
     try{
-      const res = await window.storage.get(STORAGE_KEY, false);
-      if(res && res.value){
-        const parsed = JSON.parse(res.value);
+      const raw = await store.get();
+      if(raw){
+        const parsed = JSON.parse(raw);
         categories = Array.isArray(parsed.categories) ? parsed.categories : defaultCategories();
         tasks = parsed.tasks || [];
       } else {
@@ -280,7 +295,7 @@
 
   async function saveData(){
     try{
-      await window.storage.set(STORAGE_KEY, JSON.stringify({ categories, tasks }), false);
+      await store.set(JSON.stringify({ categories, tasks }));
     } catch(e){
       console.error('Could not save tasks', e);
     }
