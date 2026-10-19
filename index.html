@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaizen — Task Manager</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+
+  :root{
+    --bg: #EFEEDF;
+    --surface: #FBFAF1;
+    --surface-alt: #E6E2CE;
+    --border: #D9D2B9;
+    --text: #2E3524;
+    --text-muted: #767c63;
+    --matcha: #6B8552;
+    --matcha-deep: #46592F;
+    --gold: #B8903E;
+    --clay: #A65A45;
+    --radius: 5px;
+  }
+
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3{ font-family: 'Shippori Mincho', serif; font-weight: 700; margin: 0; }
+
+  .app{
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ---------- Header ---------- */
+  .app-header{
+    display:flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 36px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+  .brand .tagline{ margin: 4px 0 0; font-size: 0.88rem; color: var(--text-muted); }
+  .app-header h1{ font-size: 2rem; color: var(--matcha-deep); letter-spacing: 0.01em; }
+  .app-header .date-today{ font-size: 0.85rem; color: var(--text-muted); }
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  @media (max-width: 760px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{ display:flex; flex-direction: column; gap: 32px; }
+
+  .ring-card{ text-align:center; }
+  .ring-wrap{ position: relative; width: 128px; height: 128px; margin: 0 auto 10px; }
+  .ring-wrap svg{ transform: rotate(-90deg); }
+  .ring-track{ fill:none; stroke: var(--surface-alt); stroke-width: 9; }
+  .ring-progress{ fill:none; stroke: var(--matcha); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 0.7s ease; }
+  .ring-pct{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family: 'Shippori Mincho', serif; font-size: 1.5rem; color: var(--matcha-deep);
+  }
+  .ring-caption{ font-size: 0.82rem; color: var(--text-muted); }
+
+  .sidebar h2{ font-size: 1rem; color: var(--matcha-deep); margin-bottom: 12px; font-weight: 700; }
+
+  .cat-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap: 10px; }
+  .cat-item{
+    display:flex; align-items:center; gap:9px;
+    cursor:pointer; padding: 5px 6px; border-radius: var(--radius);
+    border: 1px solid transparent;
+  }
+  .cat-item:hover{ background: var(--surface-alt); }
+  .cat-item.active{ border-color: var(--border); background: var(--surface); }
+  .cat-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .cat-name{ flex:1; font-size: 0.88rem; }
+  .cat-count{ font-size: 0.78rem; color: var(--text-muted); }
+  .cat-item.all .cat-dot{ background: var(--text-muted); }
+
+  .cat-bar-track{ height:3px; background: var(--surface-alt); border-radius: 2px; margin-top: 4px; overflow:hidden; }
+  .cat-bar-fill{ height:100%; border-radius:2px; transition: width 0.5s ease; }
+
+  .new-cat-row{ margin-top: 4px; }
+  .new-cat-btn{
+    background:none; border:none; color: var(--matcha-deep); font-size: 0.85rem;
+    cursor:pointer; padding: 4px 6px; font-family: inherit;
+  }
+  .new-cat-btn:hover{ text-decoration: underline; }
+  .cat-edit{
+    background:none; border:none; color: var(--text-muted); cursor:pointer;
+    padding: 4px; border-radius: 4px; display:flex; opacity:0; transition: opacity 0.15s ease;
+  }
+  .cat-item:hover .cat-edit, .cat-edit:focus-visible{ opacity:1; }
+  .cat-edit:hover{ color: var(--matcha-deep); }
+  @media (hover: none){ .cat-edit{ opacity: 0.7; } }
+
+  .cat-editor{
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px; display:flex; flex-direction:column; gap: 10px; margin-top: 6px;
+  }
+  .cat-editor input{
+    font-family: inherit; font-size: 0.88rem; padding: 6px 8px; color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg);
+  }
+  .cat-editor input:focus{ outline: 2px solid var(--matcha); outline-offset: 0; }
+  .swatches{ display:flex; flex-wrap:wrap; gap: 9px; }
+  .swatch{
+    width: 20px; height: 20px; border-radius: 50%; border: none; padding: 0; cursor: pointer;
+  }
+  .swatch.selected{ outline: 2px solid var(--matcha-deep); outline-offset: 2px; }
+  .editor-actions{ display:flex; gap: 6px; flex-wrap: wrap; }
+  .editor-actions button{
+    font-family: inherit; font-size: 0.8rem; padding: 5px 11px; border-radius: var(--radius); cursor: pointer;
+  }
+  .btn-save{ background: var(--matcha-deep); color:#fff; border: 1px solid var(--matcha-deep); }
+  .btn-ghost{ background: none; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-danger{ background: none; color: var(--clay); border: 1px solid var(--clay); margin-left: auto; }
+  .btn-danger.confirm{ background: var(--clay); color: #fff; }
+  .editor-hint{ font-size: 0.74rem; color: var(--text-muted); }
+
+  /* ---------- Composer ---------- */
+  .composer{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    display:flex; gap:10px; flex-wrap: wrap; align-items:center;
+  }
+  .composer input[type=text]{
+    flex: 1 1 200px; min-width: 160px;
+    border:none; background:none; font-family: inherit; font-size: 0.95rem;
+    color: var(--text); padding: 6px 2px; outline:none;
+  }
+  .composer input[type=text]::placeholder{ color: var(--text-muted); }
+  .composer select, .composer input[type=date]{
+    font-family: inherit; font-size: 0.85rem; color: var(--text);
+    border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius);
+    padding: 6px 8px;
+  }
+  .composer .add-btn{
+    font-family: inherit; font-size: 0.88rem; font-weight: 500;
+    background: var(--matcha-deep); color: #fff; border:none; border-radius: var(--radius);
+    padding: 8px 16px; cursor: pointer; transition: background 0.15s ease;
+  }
+  .composer .add-btn:hover{ background: var(--matcha); }
+
+  /* ---------- Reminders ---------- */
+  .reminders{ margin-bottom: 20px; display:flex; flex-direction:column; gap:6px; }
+  .reminder-line{
+    font-size: 0.85rem; display:flex; align-items:center; gap:7px;
+    padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .reminder-line .dot{ width:7px; height:7px; border-radius:50%; }
+  .reminder-line.today .dot{ background: var(--gold); }
+  .reminder-line.today{ color: #7a5e26; }
+  .reminder-line.overdue .dot{ background: var(--clay); }
+  .reminder-line.overdue{ color: var(--clay); }
+
+  /* ---------- Task groups ---------- */
+  .group{ margin-bottom: 26px; }
+  .group-title{
+    font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .group-title .line{ flex:1; height:1px; background: var(--border); }
+
+  .task-list{ list-style:none; margin:0; padding:0; }
+  .task-row{
+    display:flex; align-items:flex-start; gap: 11px;
+    padding: 10px 4px; border-bottom: 1px solid var(--border);
+  }
+  .task-row:last-child{ border-bottom:none; }
+
+  .checkbox{
+    width: 19px; height: 19px; border-radius: 5px; border: 1.5px solid var(--matcha);
+    flex-shrink:0; margin-top: 2px; cursor: pointer; background: var(--surface);
+    display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .checkbox svg{ width:12px; height:12px; opacity:0; transform: scale(0.4); transition: all 0.22s ease; }
+  .checkbox.checked{ background: var(--matcha); }
+  .checkbox.checked svg{ opacity:1; transform: scale(1); }
+
+  .task-main{ flex:1; min-width:0; }
+  .task-title{ font-size: 0.93rem; word-break: break-word; }
+  .task-row.completed .task-title{ color: var(--text-muted); text-decoration: line-through; }
+  .task-meta{ display:flex; gap:10px; align-items:center; margin-top: 4px; flex-wrap:wrap; }
+  .task-cat{ display:flex; align-items:center; gap:5px; font-size: 0.76rem; color: var(--text-muted); }
+  .task-cat .dot{ width:7px; height:7px; border-radius:50%; }
+  .task-deadline{ font-size: 0.76rem; }
+  .task-deadline.overdue{ color: var(--clay); }
+  .task-deadline.today{ color: var(--gold); }
+  .task-deadline.normal{ color: var(--text-muted); }
+
+  .task-del{
+    background:none; border:none; color: var(--text-muted); cursor:pointer;
+    font-size: 1rem; padding: 2px 6px; opacity: 0; transition: opacity 0.15s ease;
+    flex-shrink:0;
+  }
+  .task-row:hover .task-del{ opacity: 1; }
+  .task-del:hover{ color: var(--clay); }
+
+  .empty-state{
+    color: var(--text-muted); font-size: 0.9rem; padding: 30px 4px; text-align:left;
+  }
+
+  .toggle-completed{
+    background:none; border:none; color: var(--text-muted); font-size: 0.8rem;
+    cursor:pointer; font-family: inherit; padding: 4px 0; text-decoration: underline;
+  }
+
+  .loading{ padding: 60px 0; text-align:center; color: var(--text-muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="loading" id="loading">Loading your tasks…</div>
+  </div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'matcha-tasks-v1';
+  const PALETTE = ['#6B8552', '#46592F', '#9CAF88', '#B8903E', '#C9A64C', '#A65A45', '#8C6A4F', '#6E7F86'];
+
+  let categories = [];
+  let tasks = [];
+  let activeCategory = null;      // null = all
+  let showCompleted = false;
+  let editor = null;            // null | { mode: 'new' } | { mode: 'edit', id }
+  let editorColor = PALETTE[0];
+  let confirmDelete = false;
+
+  function defaultCategories(){
+    return [
+      { id: 'work',     name: 'Work',     color: '#6B8552' },
+      { id: 'personal', name: 'Personal', color: '#B8903E' },
+      { id: 'study',    name: 'Study',    color: '#46592F' },
+      { id: 'home',     name: 'Home',     color: '#A65A45' },
+    ];
+  }
+
+  function uid(){
+    return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+  }
+
+  async function loadData(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){
+        const parsed = JSON.parse(res.value);
+        categories = Array.isArray(parsed.categories) ? parsed.categories : defaultCategories();
+        tasks = parsed.tasks || [];
+      } else {
+        categories = defaultCategories();
+        tasks = [];
+      }
+    } catch(e){
+      categories = defaultCategories();
+      tasks = [];
+    }
+    render();
+  }
+
+  async function saveData(){
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify({ categories, tasks }), false);
+    } catch(e){
+      console.error('Could not save tasks', e);
+    }
+  }
+
+  // ---------- date helpers ----------
+  function todayISO(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function daysBetween(iso){
+    const [y,m,d] = iso.split('-').map(Number);
+    const target = new Date(y, m-1, d);
+    const now = new Date();
+    const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((target - todayMid) / 86400000);
+  }
+  function deadlineInfo(iso){
+    if(!iso) return { label: 'No deadline', tone: 'normal' };
+    const diff = daysBetween(iso);
+    if(diff < 0) return { label: diff === -1 ? 'Overdue by 1 day' : `Overdue by ${-diff} days`, tone: 'overdue' };
+    if(diff === 0) return { label: 'Due today', tone: 'today' };
+    if(diff === 1) return { label: 'Due tomorrow', tone: 'normal' };
+    if(diff <= 7) return { label: `Due in ${diff} days`, tone: 'normal' };
+    const [y,m,d] = iso.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    return { label: 'Due ' + dt.toLocaleDateString(undefined, { month:'short', day:'numeric' }), tone: 'normal' };
+  }
+
+  function catById(id){ return categories.find(c => c.id === id); }
+
+  // ---------- mutations ----------
+  function addTask(title, categoryId, deadline){
+    tasks.push({ id: uid(), title, categoryId: categoryId || null, deadline: deadline || null, completed: false, createdAt: Date.now() });
+    saveData(); render();
+  }
+  function toggleTask(id){
+    const t = tasks.find(t => t.id === id);
+    if(t){ t.completed = !t.completed; saveData(); render(); }
+  }
+  function deleteTask(id){
+    tasks = tasks.filter(t => t.id !== id);
+    saveData(); render();
+  }
+  function addCategory(name, color){
+    categories.push({ id: uid(), name, color });
+    saveData();
+  }
+  function updateCategory(id, name, color){
+    const c = catById(id);
+    if(c){ c.name = name; c.color = color; saveData(); }
+  }
+  function deleteCategory(id){
+    categories = categories.filter(c => c.id !== id);
+    tasks.forEach(t => { if(t.categoryId === id) t.categoryId = null; });
+    if(activeCategory === id) activeCategory = null;
+    saveData();
+  }
+
+  // ---------- rendering ----------
+  function checkSVG(){
+    return '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.2 11.5L13 4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function render(){
+    const app = document.getElementById('app');
+    const keep = { title: fieldVal('titleInput'), cat: fieldVal('catSelect'), date: fieldVal('deadlineInput') };
+
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const pct = total ? Math.round((done/total)*100) : 0;
+    const r = 55, circ = 2*Math.PI*r;
+    const offset = circ - (pct/100)*circ;
+
+    const overdueCount = tasks.filter(t => !t.completed && t.deadline && daysBetween(t.deadline) < 0).length;
+    const todayCount = tasks.filter(t => !t.completed && t.deadline && daysBetween(t.deadline) === 0).length;
+
+    // sidebar categories
+    const catItemsHTML = categories.map(c => {
+      if(editor && editor.mode === 'edit' && editor.id === c.id){
+        return `<li>${editorHTML()}</li>`;
+      }
+      const catTasks = tasks.filter(t => t.categoryId === c.id);
+      const catDone = catTasks.filter(t => t.completed).length;
+      const catTotal = catTasks.length;
+      const catPct = catTotal ? Math.round((catDone/catTotal)*100) : 0;
+      const active = activeCategory === c.id ? 'active' : '';
+      return `
+        <li class="cat-item ${active}" data-cat="${c.id}">
+          <span style="flex:1; min-width:0;">
+            <span style="display:flex; align-items:center; gap:9px;">
+              <span class="cat-dot" style="background:${c.color}"></span>
+              <span class="cat-name">${escapeHTML(c.name)}</span>
+              <span class="cat-count">${catDone}/${catTotal}</span>
+            </span>
+            <span class="cat-bar-track"><span class="cat-bar-fill" style="width:${catPct}%; background:${c.color}"></span></span>
+          </span>
+          <button class="cat-edit" data-edit="${c.id}" aria-label="Edit category ${escapeAttr(c.name)}">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10.5 2.5l3 3L5 14H2v-3l8.5-8.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          </button>
+        </li>`;
+    }).join('');
+
+    const allActive = activeCategory === null ? 'active' : '';
+
+    app.innerHTML = `
+      <div class="app-header">
+        <div class="brand">
+          <h1>Kaizen</h1>
+          <p class="tagline">become 1% better everyday &lt;3</p>
+        </div>
+        <span class="date-today">${new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' })}</span>
+      </div>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="ring-card">
+            <div class="ring-wrap">
+              <svg width="128" height="128" viewBox="0 0 128 128">
+                <circle class="ring-track" cx="64" cy="64" r="${r}" />
+                <circle class="ring-progress" cx="64" cy="64" r="${r}"
+                  stroke-dasharray="${circ}" stroke-dashoffset="${total ? offset : circ}" />
+              </svg>
+              <div class="ring-pct">${total ? pct + '%' : '—'}</div>
+            </div>
+            <div class="ring-caption">${total ? `${done} of ${total} tasks done` : 'No tasks yet'}</div>
+          </div>
+
+          <div>
+            <h2>Categories</h2>
+            <ul class="cat-list">
+              <li class="cat-item all ${allActive}" data-cat="__all__">
+                <span class="cat-dot"></span>
+                <span class="cat-name">All tasks</span>
+                <span class="cat-count">${total}</span>
+              </li>
+              ${catItemsHTML}
+            </ul>
+            <div class="new-cat-row">
+              ${editor && editor.mode === 'new' ? editorHTML() : '<button class="new-cat-btn" id="newCatToggle">+ New category</button>'}
+            </div>
+          </div>
+        </aside>
+
+        <main>
+          <div class="composer">
+            <input type="text" id="titleInput" placeholder="What needs doing?" maxlength="140" />
+            <select id="catSelect">
+              <option value="">No category</option>
+              ${categories.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('')}
+            </select>
+            <input type="date" id="deadlineInput" />
+            <button class="add-btn" id="addBtn">Add task</button>
+          </div>
+
+          ${(todayCount || overdueCount) ? `
+          <div class="reminders">
+            ${overdueCount ? `<div class="reminder-line overdue"><span class="dot"></span>${overdueCount} task${overdueCount>1?'s':''} overdue</div>` : ''}
+            ${todayCount ? `<div class="reminder-line today"><span class="dot"></span>${todayCount} task${todayCount>1?'s':''} due today</div>` : ''}
+          </div>` : ''}
+
+          ${renderTaskGroups()}
+        </main>
+      </div>
+    `;
+
+    attachEvents();
+    if(keep.title) document.getElementById('titleInput').value = keep.title;
+    if(keep.cat) document.getElementById('catSelect').value = keep.cat;
+    if(keep.date) document.getElementById('deadlineInput').value = keep.date;
+  }
+
+  function fieldVal(id){ const e = document.getElementById(id); return e ? e.value : ''; }
+
+  function renderTaskGroups(){
+    const filtered = tasks.filter(t => activeCategory === null || t.categoryId === activeCategory);
+    const active = filtered.filter(t => !t.completed);
+    const completed = filtered.filter(t => t.completed);
+
+    if(filtered.length === 0){
+      return `<div class="empty-state">${activeCategory ? 'No tasks in this category yet.' : 'No tasks yet. Add one above to get started.'}</div>`;
+    }
+
+    const groups = {
+      overdue: { title: 'Overdue', items: [] },
+      today:   { title: 'Today', items: [] },
+      soon:    { title: 'Upcoming', items: [] },
+      later:   { title: 'Later', items: [] },
+      none:    { title: 'No deadline', items: [] },
+    };
+
+    active.forEach(t => {
+      if(!t.deadline){ groups.none.items.push(t); return; }
+      const diff = daysBetween(t.deadline);
+      if(diff < 0) groups.overdue.items.push(t);
+      else if(diff === 0) groups.today.items.push(t);
+      else if(diff <= 7) groups.soon.items.push(t);
+      else groups.later.items.push(t);
+    });
+
+    let html = '';
+    Object.values(groups).forEach(g => {
+      if(g.items.length === 0) return;
+      g.items.sort((a,b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
+      html += `
+        <div class="group">
+          <div class="group-title">${g.title}<span class="line"></span></div>
+          <ul class="task-list">${g.items.map(taskRowHTML).join('')}</ul>
+        </div>`;
+    });
+
+    if(completed.length){
+      html += `<button class="toggle-completed" id="toggleCompleted">${showCompleted ? 'Hide' : 'Show'} completed (${completed.length})</button>`;
+      if(showCompleted){
+        html += `<div class="group" style="margin-top:10px;"><ul class="task-list">${completed.map(taskRowHTML).join('')}</ul></div>`;
+      }
+    }
+
+    return html;
+  }
+
+  function taskRowHTML(t){
+    const cat = t.categoryId ? catById(t.categoryId) : null;
+    const dl = deadlineInfo(t.deadline);
+    return `
+      <li class="task-row ${t.completed ? 'completed' : ''}" data-id="${t.id}">
+        <span class="checkbox ${t.completed ? 'checked' : ''}" data-action="toggle" data-id="${t.id}">${checkSVG()}</span>
+        <span class="task-main">
+          <div class="task-title">${escapeHTML(t.title)}</div>
+          <div class="task-meta">
+            ${cat ? `<span class="task-cat"><span class="dot" style="background:${cat.color}"></span>${escapeHTML(cat.name)}</span>` : ''}
+            ${t.deadline ? `<span class="task-deadline ${dl.tone}">${dl.label}</span>` : ''}
+          </div>
+        </span>
+        <button class="task-del" data-action="delete" data-id="${t.id}" aria-label="Delete task">×</button>
+      </li>`;
+  }
+
+  function escapeAttr(str){
+    return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function escapeHTML(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function attachEvents(){
+    document.getElementById('addBtn').addEventListener('click', submitTask);
+    document.getElementById('titleInput').addEventListener('keydown', e => { if(e.key === 'Enter') submitTask(); });
+
+    document.querySelectorAll('.cat-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.getAttribute('data-cat');
+        activeCategory = id === '__all__' ? null : id;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-action="toggle"]').forEach(el => {
+      el.addEventListener('click', () => toggleTask(el.getAttribute('data-id')));
+    });
+    document.querySelectorAll('[data-action="delete"]').forEach(el => {
+      el.addEventListener('click', (e) => { e.stopPropagation(); deleteTask(el.getAttribute('data-id')); });
+    });
+
+    const toggleCompletedBtn = document.getElementById('toggleCompleted');
+    if(toggleCompletedBtn){
+      toggleCompletedBtn.addEventListener('click', () => { showCompleted = !showCompleted; render(); });
+    }
+
+    const newCatToggle = document.getElementById('newCatToggle');
+    if(newCatToggle) newCatToggle.addEventListener('click', () => openEditor('new'));
+
+    document.querySelectorAll('.cat-edit').forEach(el => {
+      el.addEventListener('click', e => { e.stopPropagation(); openEditor('edit', el.getAttribute('data-edit')); });
+    });
+
+    const nameInput = document.getElementById('catEditorName');
+    if(nameInput){
+      nameInput.addEventListener('keydown', e => { if(e.key === 'Enter') saveEditor(); });
+      document.querySelectorAll('.swatch').forEach(sw => {
+        sw.addEventListener('click', () => {
+          editorColor = sw.getAttribute('data-color');
+          document.querySelectorAll('.swatch').forEach(x => x.classList.toggle('selected', x === sw));
+        });
+      });
+      document.getElementById('catSave').addEventListener('click', saveEditor);
+      document.getElementById('catCancel').addEventListener('click', closeEditor);
+      const del = document.getElementById('catDelete');
+      if(del){
+        del.addEventListener('click', () => {
+          if(!confirmDelete){
+            confirmDelete = true;
+            del.textContent = 'Confirm delete';
+            del.classList.add('confirm');
+            return;
+          }
+          deleteCategory(editor.id);
+          closeEditor();
+        });
+      }
+    }
+  }
+
+  function editorHTML(){
+    const isEdit = editor.mode === 'edit';
+    const cat = isEdit ? catById(editor.id) : null;
+    return `
+      <div class="cat-editor" id="catEditor">
+        <input type="text" id="catEditorName" value="${isEdit ? escapeAttr(cat.name) : ''}" placeholder="Category name" maxlength="24" aria-label="Category name" />
+        <div class="swatches">
+          ${PALETTE.map(c => `<button type="button" class="swatch ${c === editorColor ? 'selected' : ''}" data-color="${c}" style="background:${c}" aria-label="Color ${c}"></button>`).join('')}
+        </div>
+        <div class="editor-actions">
+          <button type="button" class="btn-save" id="catSave">${isEdit ? 'Save' : 'Add'}</button>
+          <button type="button" class="btn-ghost" id="catCancel">Cancel</button>
+          ${isEdit ? '<button type="button" class="btn-danger" id="catDelete">Delete</button>' : ''}
+        </div>
+        ${isEdit ? '<div class="editor-hint">Deleting keeps the tasks; they just lose this category.</div>' : ''}
+      </div>`;
+  }
+
+  function openEditor(mode, id){
+    editor = { mode, id };
+    confirmDelete = false;
+    editorColor = mode === 'edit' ? catById(id).color : PALETTE[categories.length % PALETTE.length];
+    render();
+    const input = document.getElementById('catEditorName');
+    if(input){ input.focus(); input.select(); }
+  }
+
+  function closeEditor(){
+    editor = null;
+    confirmDelete = false;
+    render();
+  }
+
+  function saveEditor(){
+    const input = document.getElementById('catEditorName');
+    const name = input.value.trim();
+    if(!name){ input.focus(); return; }
+    if(editor.mode === 'edit') updateCategory(editor.id, name, editorColor);
+    else addCategory(name, editorColor);
+    closeEditor();
+  }
+
+  function submitTask(){
+    const titleInput = document.getElementById('titleInput');
+    const catSelect = document.getElementById('catSelect');
+    const deadlineInput = document.getElementById('deadlineInput');
+    const title = titleInput.value.trim();
+    if(!title) return;
+    addTask(title, catSelect.value || null, deadlineInput.value || null);
+  }
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && editor) closeEditor();
+  });
+
+  loadData();
+})();
+</script>
+</body>
+</html>
