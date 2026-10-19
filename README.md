@@ -10,7 +10,7 @@ A simple To-Do list/planner to become 1% better everyday
 - Tasks save automatically in your browser
 
 # Live Demo
-
+https://jeonabhi.github.io/Kaizen/
 
 # Running Locally
 This is a single self-contained HTML file - no installation required.
