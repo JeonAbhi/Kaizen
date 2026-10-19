@@ -1,5 +1,5 @@
 # Kaizen
-A simple To-Do list/planner to become 1% better everyday
+A simple To-Do list/task manager to become 1% better everyday
 
 # Features
 - Add tasks with an optional deadline
